@@ -12,13 +12,13 @@ from backend.src.ai.prompts.assessment import (
     CLASSIFICATION_PROMPT,
     GOALS_PROMPT,
     ONBOARDING_COMPLETE_TEMPLATE,
-    SPEAKING_ASSESSMENT_PROMPT,
     TARGET_COMPANY_PROMPT,
     TARGET_STACK_PROMPT,
     TECH_ROLE_PROMPT,
     TECH_STACK_PROMPT,
     WELCOME_MESSAGE,
-    WRITTEN_ASSESSMENT_PROMPTS,
+    get_assessment_prompts,
+    get_speaking_prompt,
 )
 from backend.src.bot.keyboards import (
     build_goals_keyboard,
@@ -339,7 +339,8 @@ class AssessmentEngine:
         data.state = OnboardingState.WRITTEN_1.value
         await self._save_state(user.id, data)
 
-        prompt = WRITTEN_ASSESSMENT_PROMPTS[1]
+        prompts = get_assessment_prompts(data.goals)
+        prompt = prompts[1]
         await self._send_voice_prompt(chat_id, prompt)
 
     async def process_text_response(
@@ -350,6 +351,7 @@ class AssessmentEngine:
             return
 
         state = data.state
+        prompts = get_assessment_prompts(data.goals)
 
         if state == OnboardingState.WRITTEN_1.value:
             data.responses.append(text)
@@ -360,7 +362,7 @@ class AssessmentEngine:
             ))
             data.state = OnboardingState.WRITTEN_2.value
             await self._save_state(user.id, data)
-            prompt = WRITTEN_ASSESSMENT_PROMPTS[2]
+            prompt = prompts[2]
             await self._send_voice_prompt(chat_id, prompt)
 
         elif state == OnboardingState.WRITTEN_2.value:
@@ -377,7 +379,7 @@ class AssessmentEngine:
 
             data.state = OnboardingState.WRITTEN_3.value
             await self._save_state(user.id, data)
-            prompt = WRITTEN_ASSESSMENT_PROMPTS[3].format(tech_context=tech_context)
+            prompt = prompts[3].format(tech_context=tech_context)
             await self._send_voice_prompt(chat_id, prompt)
 
         elif state == OnboardingState.WRITTEN_3.value:
@@ -389,7 +391,8 @@ class AssessmentEngine:
             ))
             data.state = OnboardingState.SPEAKING.value
             await self._save_state(user.id, data)
-            await self._send_voice_prompt(chat_id, SPEAKING_ASSESSMENT_PROMPT)
+            speaking_prompt = get_speaking_prompt(data.goals)
+            await self._send_voice_prompt(chat_id, speaking_prompt)
 
     async def process_voice_response(
         self, user: User, chat_id: str, transcription: str

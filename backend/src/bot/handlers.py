@@ -219,6 +219,7 @@ async def handle_onboarding_text(
         db_session = context.user_data.get("db_session_instance")
         if db_session:
             assessment._db = db_session
+        print(f"[ONBOARDING] custom text in {state.state}: '{text}'")
         await assessment.add_custom_option(user, chat_id, state.state, text)
         return True
 
@@ -513,7 +514,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             logger.warning("stt_transcription_failed", user_id=str(user.id))
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
-                text="I couldn't understand that audio. Could you try again or type your message?",
+                text="I couldn't understand that audio. Could you try sending another voice message?",
             )
             await _commit_session(context)
             return
@@ -523,7 +524,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         if len(transcription) < 3:
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
-                text="I couldn't understand that audio. Could you try again or type your message?",
+                text="I couldn't understand that audio. Could you try sending another voice message?",
             )
             await _commit_session(context)
             return

@@ -65,32 +65,127 @@ TARGET_COMPANY_PROMPT = (
 
 TARGET_COMPANY_OPTIONS = ["Big Tech", "Startup", "Enterprise", "Not sure"]
 
-WRITTEN_ASSESSMENT_PROMPTS = {
-    1: (
-        "Now let's check your English! Tell me a bit about yourself — "
-        "what do you do and what project are you working on right now?\n\n"
-        "Send me a voice message!"
+ASSESSMENT_PROMPTS_BY_GOAL = {
+    "technical_interview": {
+        1: (
+            "Let's practice some interview skills! "
+            "Tell me about yourself — what do you do and what's your experience?\n\n"
+            "Send me a voice message!"
+        ),
+        2: (
+            "Nice! Now imagine you're in a technical interview. "
+            "Walk me through a challenging project you worked on recently. "
+            "What was your role and what technical decisions did you make?\n\n"
+            "Send me a voice message!"
+        ),
+        3: (
+            "Last one! The interviewer asks: Why would you choose {tech_context} "
+            "for a new project? What are the trade-offs?\n\n"
+            "Send me a voice message — take your time!"
+        ),
+    },
+    "hr_interview": {
+        1: (
+            "Let's practice some interview skills! "
+            "Tell me about yourself — what do you do and what makes you stand out?\n\n"
+            "Send me a voice message!"
+        ),
+        2: (
+            "Nice! Now imagine you're in an HR interview. "
+            "Tell me about a time you had a disagreement with a teammate. "
+            "How did you handle it?\n\n"
+            "Send me a voice message!"
+        ),
+        3: (
+            "Last one! The interviewer asks: Where do you see yourself in 5 years? "
+            "How does working with {tech_context} fit into your career goals?\n\n"
+            "Send me a voice message — take your time!"
+        ),
+    },
+    "meetings": {
+        1: (
+            "Now let's check your English! Tell me a bit about yourself — "
+            "what do you do and what project are you working on right now?\n\n"
+            "Send me a voice message!"
+        ),
+        2: (
+            "Nice! Now imagine you're in a standup meeting. "
+            "Describe what you did yesterday and what you plan to do today.\n\n"
+            "Send me a voice message!"
+        ),
+        3: (
+            "Last one! Imagine you're explaining a technical decision to a teammate. "
+            "Why would you choose {tech_context} for a new project? "
+            "What are the trade-offs?\n\n"
+            "Send me a voice message — take your time!"
+        ),
+    },
+    "presentations": {
+        1: (
+            "Now let's check your English! Tell me about yourself "
+            "and the team you work with. What are you building?\n\n"
+            "Send me a voice message!"
+        ),
+        2: (
+            "Nice! Imagine you're presenting a project update to stakeholders. "
+            "Explain what your team accomplished this sprint and what's coming next.\n\n"
+            "Send me a voice message!"
+        ),
+        3: (
+            "Last one! You're leading a tech review. "
+            "Explain to the team why you'd choose {tech_context} for a new project. "
+            "What are the trade-offs?\n\n"
+            "Send me a voice message — take your time!"
+        ),
+    },
+}
+
+SPEAKING_PROMPTS_BY_GOAL = {
+    "technical_interview": (
+        "Almost done! One more question.\n\n"
+        "The interviewer asks: What's the most interesting technical challenge "
+        "you've faced recently? How did you approach it?\n\n"
+        "Send me a voice message — speak for about 30-60 seconds. "
+        "Don't worry about being perfect!"
     ),
-    2: (
-        "Nice! Now imagine you're in a standup meeting. "
-        "Describe what you did yesterday and what you plan to do today.\n\n"
-        "Send me a voice message!"
+    "hr_interview": (
+        "Almost done! One more question.\n\n"
+        "The interviewer asks: What's your greatest strength, "
+        "and how has it helped you in your work?\n\n"
+        "Send me a voice message — speak for about 30-60 seconds. "
+        "Don't worry about being perfect!"
     ),
-    3: (
-        "Last one! Imagine you're explaining a technical decision to a teammate. "
-        "Why would you choose {tech_context} for a new project? "
-        "What are the trade-offs?\n\n"
-        "Send me a voice message — take your time!"
+    "meetings": (
+        "Almost done! One more question.\n\n"
+        "What's the most interesting technical challenge you've faced recently? "
+        "How did you solve it?\n\n"
+        "Send me a voice message — speak for about 30-60 seconds. "
+        "Don't worry about being perfect!"
+    ),
+    "presentations": (
+        "Almost done! One more question.\n\n"
+        "Imagine you're giving a lightning talk. Explain the most interesting "
+        "technical challenge you've faced recently and how you solved it.\n\n"
+        "Send me a voice message — speak for about 30-60 seconds. "
+        "Don't worry about being perfect!"
     ),
 }
 
-SPEAKING_ASSESSMENT_PROMPT = (
-    "Almost done! One more question.\n\n"
-    "What's the most interesting technical challenge you've faced recently? "
-    "How did you solve it?\n\n"
-    "Send me a voice message — speak for about 30-60 seconds. "
-    "Don't worry about being perfect!"
-)
+
+def get_assessment_prompts(goals: list[str]) -> dict[int, str]:
+    """Get assessment prompts tailored to the user's learning goals."""
+    for goal in ["technical_interview", "hr_interview", "presentations", "meetings"]:
+        if goal in goals:
+            return ASSESSMENT_PROMPTS_BY_GOAL[goal]
+    return ASSESSMENT_PROMPTS_BY_GOAL["meetings"]
+
+
+def get_speaking_prompt(goals: list[str]) -> str:
+    """Get speaking assessment prompt tailored to the user's learning goals."""
+    for goal in ["technical_interview", "hr_interview", "presentations", "meetings"]:
+        if goal in goals:
+            return SPEAKING_PROMPTS_BY_GOAL[goal]
+    return SPEAKING_PROMPTS_BY_GOAL["meetings"]
 
 CLASSIFICATION_PROMPT = """You are an English language assessor for Brazilian software developers.
 
