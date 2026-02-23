@@ -111,7 +111,7 @@ async def lifespan(app: FastAPI):
 
     # Core services — db=None, handlers inject per-request session
     assessment_engine = AssessmentEngine(
-        db=None, llm=llm, channel=channel, redis_client=redis_client
+        db=None, llm=llm, channel=channel, redis_client=redis_client, tts=tts
     )
     study_plan_generator = StudyPlanGenerator(db=None, llm=llm)
 

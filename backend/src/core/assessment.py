@@ -105,11 +105,24 @@ class AssessmentEngine:
         llm: LLMProvider,
         channel: MessageChannel,
         redis_client: object | None = None,
+        tts: object | None = None,
     ):
         self._db = db
         self._llm = llm
         self._channel = channel
         self._redis = redis_client
+        self._tts = tts
+
+    async def _send_voice_prompt(self, chat_id: str, text: str) -> None:
+        """Send a prompt as voice audio + text fallback."""
+        if self._tts is not None:
+            try:
+                audio = await self._tts.synthesize(text, speed=0.9)
+                await self._channel.send_audio(chat_id, audio, caption=text)
+                return
+            except Exception:
+                logger.warning("assessment_tts_failed")
+        await self._channel.send_text(chat_id, text)
 
     def _redis_key(self, user_id: uuid.UUID) -> str:
         return f"assessment:{user_id}"
@@ -327,7 +340,7 @@ class AssessmentEngine:
         await self._save_state(user.id, data)
 
         prompt = WRITTEN_ASSESSMENT_PROMPTS[1]
-        await self._channel.send_text(chat_id, prompt)
+        await self._send_voice_prompt(chat_id, prompt)
 
     async def process_text_response(
         self, user: User, chat_id: str, text: str
@@ -348,7 +361,7 @@ class AssessmentEngine:
             data.state = OnboardingState.WRITTEN_2.value
             await self._save_state(user.id, data)
             prompt = WRITTEN_ASSESSMENT_PROMPTS[2]
-            await self._channel.send_text(chat_id, prompt)
+            await self._send_voice_prompt(chat_id, prompt)
 
         elif state == OnboardingState.WRITTEN_2.value:
             data.responses.append(text)
@@ -365,7 +378,7 @@ class AssessmentEngine:
             data.state = OnboardingState.WRITTEN_3.value
             await self._save_state(user.id, data)
             prompt = WRITTEN_ASSESSMENT_PROMPTS[3].format(tech_context=tech_context)
-            await self._channel.send_text(chat_id, prompt)
+            await self._send_voice_prompt(chat_id, prompt)
 
         elif state == OnboardingState.WRITTEN_3.value:
             data.responses.append(text)
@@ -376,7 +389,7 @@ class AssessmentEngine:
             ))
             data.state = OnboardingState.SPEAKING.value
             await self._save_state(user.id, data)
-            await self._channel.send_text(chat_id, SPEAKING_ASSESSMENT_PROMPT)
+            await self._send_voice_prompt(chat_id, SPEAKING_ASSESSMENT_PROMPT)
 
     async def process_voice_response(
         self, user: User, chat_id: str, transcription: str

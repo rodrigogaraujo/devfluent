@@ -69,26 +69,27 @@ WRITTEN_ASSESSMENT_PROMPTS = {
     1: (
         "Now let's check your English! Tell me a bit about yourself — "
         "what do you do and what project are you working on right now?\n\n"
-        "You can type or send a voice message — whatever feels natural!"
+        "Send me a voice message!"
     ),
     2: (
         "Nice! Now imagine you're in a standup meeting. "
         "Describe what you did yesterday and what you plan to do today.\n\n"
-        "Type or send a voice message."
+        "Send me a voice message!"
     ),
     3: (
         "Last one! Imagine you're explaining a technical decision to a teammate. "
         "Why would you choose {tech_context} for a new project? "
         "What are the trade-offs?\n\n"
-        "Type or send a voice message — take your time!"
+        "Send me a voice message — take your time!"
     ),
 }
 
 SPEAKING_ASSESSMENT_PROMPT = (
-    "Almost done! Now I'd love to hear your voice.\n\n"
-    "Send me a voice message: What's the most interesting technical "
-    "challenge you've faced recently? How did you solve it?\n\n"
-    "Speak for about 30-60 seconds. Don't worry about being perfect!"
+    "Almost done! One more question.\n\n"
+    "What's the most interesting technical challenge you've faced recently? "
+    "How did you solve it?\n\n"
+    "Send me a voice message — speak for about 30-60 seconds. "
+    "Don't worry about being perfect!"
 )
 
 CLASSIFICATION_PROMPT = """You are an English language assessor for Brazilian software developers.
