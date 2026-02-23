@@ -45,6 +45,16 @@ class TelegramChannel(MessageChannel):
             **kwargs,
         )
 
+    async def edit_keyboard(
+        self, chat_id: str, message_id: int, keyboard: Any, **kwargs: Any
+    ) -> None:
+        await self._bot.edit_message_reply_markup(
+            chat_id=int(chat_id),
+            message_id=message_id,
+            reply_markup=keyboard,
+            **kwargs,
+        )
+
     async def download_audio(self, file_id: str) -> bytes:
         file = await self._bot.get_file(file_id)
         data = await file.download_as_bytearray()

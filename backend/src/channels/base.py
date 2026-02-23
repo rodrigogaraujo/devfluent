@@ -29,4 +29,9 @@ class MessageChannel(ABC):
     ) -> None: ...
 
     @abstractmethod
+    async def edit_keyboard(
+        self, chat_id: str, message_id: int, keyboard: Any, **kwargs: Any
+    ) -> None: ...
+
+    @abstractmethod
     async def download_audio(self, file_id: str) -> bytes: ...

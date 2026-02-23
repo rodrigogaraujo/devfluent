@@ -23,12 +23,14 @@ TECH_ROLE_OPTIONS = ["Backend", "Frontend", "Fullstack", "Mobile", "Data/ML", "D
 
 TECH_STACK_PROMPT = (
     "What technologies do you work with?\n\n"
-    "Select all that apply, then tap Confirm."
+    "Select all that apply, then tap Confirm.\n"
+    "Don't see yours? Just type it!"
 )
 
 TECH_STACK_OPTIONS = [
     "Python", "JavaScript/TS", "Java", "Go", "React", "Node.js",
     "AWS", "Kubernetes", "SQL", "Docker", "C#/.NET", "Ruby",
+    "Rust", "Swift", "Kotlin", "PHP", "Vue.js", "Angular",
 ]
 
 GOALS_PROMPT = (
@@ -46,12 +48,14 @@ GOALS_OPTIONS = [
 TARGET_STACK_PROMPT = (
     "You're preparing for technical interviews — great!\n\n"
     "What stack is the job you're targeting?\n"
-    "Select all that apply, then tap Confirm."
+    "Select all that apply, then tap Confirm.\n"
+    "Don't see yours? Just type it!"
 )
 
 TARGET_STACK_OPTIONS = [
     "Node.js", "Python", "React", "Java", "Go", "AWS", "System Design",
     "Kubernetes", "SQL", "Docker", "C#/.NET", "Ruby",
+    "Rust", "Kotlin", "Vue.js", "Angular", "GCP", "Azure",
 ]
 
 TARGET_COMPANY_PROMPT = (
@@ -63,28 +67,28 @@ TARGET_COMPANY_OPTIONS = ["Big Tech", "Startup", "Enterprise", "Not sure"]
 
 WRITTEN_ASSESSMENT_PROMPTS = {
     1: (
-        "Let's check your English! Tell me a bit about yourself — "
+        "Now let's check your English! Tell me a bit about yourself — "
         "what do you do and what project are you working on right now?\n\n"
-        "(Write in English, don't worry about mistakes!)"
+        "You can type or send a voice message — whatever feels natural!"
     ),
     2: (
         "Nice! Now imagine you're in a standup meeting. "
         "Describe what you did yesterday and what you plan to do today.\n\n"
-        "(Try to use complete sentences.)"
+        "Type or send a voice message."
     ),
     3: (
         "Last one! Imagine you're explaining a technical decision to a teammate. "
         "Why would you choose {tech_context} for a new project? "
         "What are the trade-offs?\n\n"
-        "(Take your time, be as detailed as you'd like.)"
+        "Type or send a voice message — take your time!"
     ),
 }
 
 SPEAKING_ASSESSMENT_PROMPT = (
-    "Almost done! Now I'd like to hear your voice.\n\n"
-    "Send me a voice message explaining: What's the most interesting technical "
+    "Almost done! Now I'd love to hear your voice.\n\n"
+    "Send me a voice message: What's the most interesting technical "
     "challenge you've faced recently? How did you solve it?\n\n"
-    "(Speak in English for about 30-60 seconds. Don't worry about being perfect!)"
+    "Speak for about 30-60 seconds. Don't worry about being perfect!"
 )
 
 CLASSIFICATION_PROMPT = """You are an English language assessor for Brazilian software developers.

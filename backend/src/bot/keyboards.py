@@ -36,10 +36,17 @@ def build_multi_select_keyboard(
     category: str,
     options: list[str],
     selected: set[str],
+    show_other: bool = True,
 ) -> InlineKeyboardMarkup:
+    # Include any custom selections not in predefined options
+    all_options = list(options)
+    for s in selected:
+        if s not in all_options:
+            all_options.append(s)
+
     buttons = []
     row: list[InlineKeyboardButton] = []
-    for opt in options:
+    for opt in all_options:
         prefix = "\u2713 " if opt in selected else ""
         row.append(
             InlineKeyboardButton(

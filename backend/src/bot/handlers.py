@@ -150,7 +150,8 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             "self_declaration:", "tech_role:", "toggle:", "confirm:", "target_company:",
         )
         if any(callback_data.startswith(p) for p in onboarding_prefixes):
-            await assessment.process_callback(user, chat_id, callback_data)
+            msg_id = query.message.message_id if query.message else None
+            await assessment.process_callback(user, chat_id, callback_data, message_id=msg_id)
 
             # If onboarding just completed, generate study plan
             state = await assessment.get_onboarding_state(user.id)
@@ -207,6 +208,20 @@ async def handle_onboarding_text(
     if state is None or not assessment.is_onboarding_active(state):
         return False
 
+    # Handle custom text input during multi-select phases (user typed a tech name)
+    if state.state in ("tech_stack", "target_stack"):
+        text = update.message.text.strip() if update.message and update.message.text else ""
+        if not text:
+            return False
+        chat_id = str(update.effective_chat.id) if update.effective_chat else ""
+        if not chat_id:
+            return False
+        db_session = context.user_data.get("db_session_instance")
+        if db_session:
+            assessment._db = db_session
+        await assessment.add_custom_option(user, chat_id, state.state, text)
+        return True
+
     # Only handle text during written assessment phases
     if state.state not in ("written_1", "written_2", "written_3"):
         return False
@@ -249,7 +264,28 @@ async def handle_onboarding_voice(
     assessment: AssessmentEngine = app.bot_data["assessment_engine"]
 
     state = await assessment.get_onboarding_state(user.id)
-    if state is None or state.state != "speaking":
+    if state is None:
+        return False
+
+    # Accept voice during written assessment phases too (transcribe → treat as text)
+    if state.state in ("written_1", "written_2", "written_3"):
+        chat_id = str(update.effective_chat.id) if update.effective_chat else ""
+        if not chat_id:
+            return False
+        db_session = context.user_data.get("db_session_instance")
+        if db_session:
+            assessment._db = db_session
+        study_plan_gen: StudyPlanGenerator = app.bot_data["study_plan_generator"]
+        if db_session:
+            study_plan_gen._db = db_session
+        print(f"[ONBOARDING] voice in {state.state}: {transcription[:100]}")
+        await assessment.process_text_response(user, chat_id, transcription)
+        state = await assessment.get_onboarding_state(user.id)
+        if state and state.state == "done":
+            await study_plan_gen.generate(user)
+        return True
+
+    if state.state != "speaking":
         return False
 
     chat_id = str(update.effective_chat.id) if update.effective_chat else ""

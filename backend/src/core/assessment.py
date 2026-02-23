@@ -167,7 +167,7 @@ class AssessmentEngine:
         )
 
     async def process_callback(
-        self, user: User, chat_id: str, callback_data: str
+        self, user: User, chat_id: str, callback_data: str, message_id: int | None = None
     ) -> None:
         data = await self._get_state(user.id)
         if data is None:
@@ -205,7 +205,7 @@ class AssessmentEngine:
                 return
             category = parts[1]
             value = parts[2]
-            await self._handle_toggle(user, chat_id, data, category, value)
+            await self._handle_toggle(user, chat_id, data, category, value, message_id)
 
         elif callback_data.startswith("confirm:"):
             category = callback_data.split(":", 1)[1]
@@ -225,6 +225,7 @@ class AssessmentEngine:
         data: OnboardingData,
         category: str,
         value: str,
+        message_id: int | None = None,
     ) -> None:
         if category == "tech_stack":
             if value in data.tech_stack:
@@ -233,7 +234,6 @@ class AssessmentEngine:
                 data.tech_stack.append(value)
             await self._save_state(user.id, data)
             keyboard = build_tech_stack_keyboard(set(data.tech_stack))
-            await self._channel.send_keyboard(chat_id, TECH_STACK_PROMPT, keyboard=keyboard)
 
         elif category == "goals":
             if value in data.goals:
@@ -242,7 +242,6 @@ class AssessmentEngine:
                 data.goals.append(value)
             await self._save_state(user.id, data)
             keyboard = build_goals_keyboard(set(data.goals))
-            await self._channel.send_keyboard(chat_id, GOALS_PROMPT, keyboard=keyboard)
 
         elif category == "target_stack":
             if value in data.target_stack:
@@ -251,9 +250,18 @@ class AssessmentEngine:
                 data.target_stack.append(value)
             await self._save_state(user.id, data)
             keyboard = build_target_stack_keyboard(set(data.target_stack))
-            await self._channel.send_keyboard(
-                chat_id, TARGET_STACK_PROMPT, keyboard=keyboard
-            )
+
+        else:
+            return
+
+        # Edit existing message keyboard instead of sending new one
+        if message_id:
+            try:
+                await self._channel.edit_keyboard(chat_id, message_id, keyboard)
+            except Exception:
+                await self._channel.send_keyboard(chat_id, f"Select and tap Confirm:", keyboard=keyboard)
+        else:
+            await self._channel.send_keyboard(chat_id, f"Select and tap Confirm:", keyboard=keyboard)
 
     async def _handle_confirm(
         self,
@@ -487,6 +495,39 @@ class AssessmentEngine:
         user.target_stack = target_stack
         if target_company:
             user.target_company = target_company
+
+    async def add_custom_option(
+        self, user: User, chat_id: str, category: str, value: str
+    ) -> None:
+        """Add a custom typed option to a multi-select phase."""
+        data = await self._get_state(user.id)
+        if data is None:
+            return
+
+        value = value.strip()
+        if not value:
+            return
+
+        if category == "tech_stack" and data.state == OnboardingState.TECH_STACK.value:
+            if value not in data.tech_stack:
+                data.tech_stack.append(value)
+            await self._save_state(user.id, data)
+            keyboard = build_tech_stack_keyboard(set(data.tech_stack))
+            await self._channel.send_keyboard(
+                chat_id,
+                f'Added "{value}"! Select more or tap Confirm.',
+                keyboard=keyboard,
+            )
+        elif category == "target_stack" and data.state == OnboardingState.TARGET_STACK.value:
+            if value not in data.target_stack:
+                data.target_stack.append(value)
+            await self._save_state(user.id, data)
+            keyboard = build_target_stack_keyboard(set(data.target_stack))
+            await self._channel.send_keyboard(
+                chat_id,
+                f'Added "{value}"! Select more or tap Confirm.',
+                keyboard=keyboard,
+            )
 
     def is_onboarding_active(self, state: OnboardingData | None) -> bool:
         if state is None:
