@@ -345,6 +345,13 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         if user is None or update.effective_chat is None:
             return
 
+        # Check onboarding BEFORE active_check — onboarding text must pass through
+        if not user.onboarding_done:
+            handled = await handle_onboarding_text(update, context)
+            if handled:
+                await _commit_session(context)
+                return
+
         if not await active_check(update, context):
             await _commit_session(context)
             return
@@ -356,13 +363,6 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         if not await rate_limit(update, context, redis_client):
             await _commit_session(context)
             return
-
-        # Check if user is in onboarding — route to onboarding handler
-        if not user.onboarding_done:
-            handled = await handle_onboarding_text(update, context)
-            if handled:
-                await _commit_session(context)
-                return
 
         text = update.message.text if update.message else ""
         if not text:
@@ -450,19 +450,10 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         if user is None or update.effective_chat is None:
             return
 
-        if not await active_check(update, context):
-            await _commit_session(context)
-            return
-
         app = context.application
         db_session = context.user_data["db_session_instance"]
 
-        redis_client = app.bot_data.get("redis")
-        if not await rate_limit(update, context, redis_client):
-            await _commit_session(context)
-            return
-
-        # Download audio from Telegram
+        # Download and transcribe audio first (needed for onboarding check)
         voice = update.message.voice if update.message else None
         if voice is None:
             await _commit_session(context)
@@ -501,12 +492,21 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             await _commit_session(context)
             return
 
-        # Check if user is in onboarding speaking phase
+        # Check onboarding BEFORE active_check — onboarding voice must pass through
         if not user.onboarding_done:
             handled = await handle_onboarding_voice(update, context, transcription)
             if handled:
                 await _commit_session(context)
                 return
+
+        if not await active_check(update, context):
+            await _commit_session(context)
+            return
+
+        redis_client = app.bot_data.get("redis")
+        if not await rate_limit(update, context, redis_client):
+            await _commit_session(context)
+            return
 
         # Process through conversation engine
         conversation_engine: ConversationEngine = app.bot_data["conversation_engine"]
