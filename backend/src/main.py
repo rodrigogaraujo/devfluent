@@ -1,3 +1,5 @@
+import os
+import traceback
 from contextlib import asynccontextmanager
 
 import sentry_sdk
@@ -45,6 +47,8 @@ logger = structlog.get_logger()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # --- Startup ---
+    print(f"[STARTUP] PORT={os.environ.get('PORT', 'NOT SET')}")
+    print(f"[STARTUP] WEBHOOK_URL={settings.TELEGRAM_WEBHOOK_URL}")
 
     # Sentry
     if settings.SENTRY_DSN:
@@ -53,7 +57,7 @@ async def lifespan(app: FastAPI):
             traces_sample_rate=0.1,
             enable_tracing=True,
         )
-        logger.info("sentry_initialized")
+        print("[STARTUP] Sentry initialized")
 
     # Structlog configuration
     structlog.configure(
@@ -69,15 +73,15 @@ async def lifespan(app: FastAPI):
         cache_logger_on_first_use=True,
     )
 
-    # PTB Application
-    ptb_app = Application.builder().token(settings.TELEGRAM_BOT_TOKEN).build()
+    # PTB Application (webhook mode — no start(), only initialize())
+    ptb_app = Application.builder().token(settings.TELEGRAM_BOT_TOKEN).updater(None).build()
     await ptb_app.initialize()
-    await ptb_app.start()
+    print("[STARTUP] PTB initialized")
 
     # Set webhook
     webhook_url = f"{settings.TELEGRAM_WEBHOOK_URL}/webhook/telegram"
-    await ptb_app.bot.set_webhook(url=webhook_url)
-    logger.info("webhook_set", url=webhook_url)
+    result = await ptb_app.bot.set_webhook(url=webhook_url)
+    print(f"[STARTUP] set_webhook({webhook_url}) = {result}")
 
     # Providers
     llm = OpenAILLM(api_key=settings.OPENAI_API_KEY)
@@ -100,9 +104,9 @@ async def lifespan(app: FastAPI):
 
             redis_client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
             await redis_client.ping()
-            logger.info("redis_connected")
+            print("[STARTUP] Redis connected")
         except Exception:
-            logger.warning("redis_connection_failed")
+            print("[STARTUP] Redis connection failed (optional)")
             redis_client = None
 
     # Core services — db=None, handlers inject per-request session
@@ -176,7 +180,7 @@ async def lifespan(app: FastAPI):
     app.state.redis = redis_client
     app.state.db_session = async_session
 
-    logger.info("startup_complete")
+    print("[STARTUP] All handlers registered. Ready!")
     yield
 
     # --- Shutdown ---
@@ -184,12 +188,11 @@ async def lifespan(app: FastAPI):
         await ptb_app.bot.delete_webhook()
     except Exception:
         pass
-    await ptb_app.stop()
     await ptb_app.shutdown()
     await engine.dispose()
     if redis_client:
         await redis_client.aclose()
-    logger.info("shutdown_complete")
+    print("[SHUTDOWN] Complete")
 
 
 app = FastAPI(title="DevFluent", version="0.1.0", lifespan=lifespan)
@@ -212,12 +215,15 @@ async def health():
 async def telegram_webhook(request: Request):
     try:
         data = await request.json()
-        logger.info("webhook_received", update_id=data.get("update_id"))
+        print(f"[WEBHOOK] Received update_id={data.get('update_id')}")
         ptb_app: Application = request.app.state.ptb_app
         update = Update.de_json(data, ptb_app.bot)
         if update:
             await ptb_app.process_update(update)
-            logger.info("webhook_processed", update_id=update.update_id)
-    except Exception:
-        logger.exception("webhook_processing_error")
-    return JSONResponse(content={}, status_code=200)
+            print(f"[WEBHOOK] Processed update_id={update.update_id}")
+        else:
+            print("[WEBHOOK] update is None after de_json")
+    except Exception as e:
+        print(f"[WEBHOOK] ERROR: {e}")
+        traceback.print_exc()
+    return JSONResponse(content={"ok": True}, status_code=200)
