@@ -110,9 +110,9 @@ class ConversationEngine:
                 db, user.id, feedback.corrections
             )
 
-        # 10. Generate TTS audio if voice message and TTS available
+        # 10. Always generate TTS audio when TTS is available
         audio_bytes = None
-        if is_audio and self._tts is not None:
+        if self._tts is not None:
             try:
                 audio_bytes = await self._tts.synthesize(
                     response.content,

@@ -76,6 +76,8 @@ async def handle_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         assessment._db = db_session
         study_plan_gen._db = db_session
 
+        print(f"[START] user={user.name} (id={user.id}) onboarding_done={user.onboarding_done}")
+
         if user.onboarding_done:
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
@@ -128,6 +130,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
         chat_id = str(update.effective_chat.id)
         callback_data = query.data or ""
+        print(f"[CALLBACK] user={user.name} (id={user.id}) data={callback_data}")
         app = context.application
         db_session = context.user_data["db_session_instance"]
 
@@ -366,16 +369,31 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             await _commit_session(context)
             return
 
+        print(f"[CONV] user={user.name} (id={user.id}) input: {text[:200]}")
+
         conversation_engine: ConversationEngine = app.bot_data["conversation_engine"]
         conversation_engine._db = db_session
 
         response = await conversation_engine.process_message(user, text)
 
-        # Build response message
-        reply_parts = [response.text]
+        print(f"[CONV] bot response: {response.text[:200]}")
+        if response.corrections:
+            print(f"[CONV] corrections: {response.corrections}")
+        if response.new_vocab:
+            print(f"[CONV] new_vocab: {response.new_vocab}")
+
+        # Send voice response first (main interaction)
+        if response.audio_bytes:
+            await context.bot.send_voice(
+                chat_id=update.effective_chat.id,
+                voice=response.audio_bytes,
+            )
+
+        # Build text response with corrections/vocab
+        reply_parts = []
 
         if response.corrections:
-            corrections_text = "\n\n📝 <b>Corrections:</b>"
+            corrections_text = "📝 <b>Corrections:</b>"
             for c in response.corrections[:3]:
                 original = c.get("original", "")
                 corrected = c.get("corrected", "")
@@ -386,20 +404,27 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             reply_parts.append(corrections_text)
 
         if response.new_vocab:
-            vocab_text = "\n\n📚 <b>New vocabulary:</b>"
+            vocab_text = "📚 <b>New vocabulary:</b>"
             for v in response.new_vocab[:2]:
                 word = v.get("word", "")
                 definition = v.get("definition", "")
                 vocab_text += f"\n• <b>{word}</b>: {definition}"
             reply_parts.append(vocab_text)
 
-        full_reply = "".join(reply_parts)
-
-        await context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text=full_reply,
-            parse_mode="HTML",
-        )
+        # Send text with corrections only if there are corrections/vocab, otherwise send text as caption-like message
+        if reply_parts:
+            full_reply = "\n\n".join(reply_parts)
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text=full_reply,
+                parse_mode="HTML",
+            )
+        elif not response.audio_bytes:
+            # Fallback: no TTS available, send text
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text=response.text,
+            )
 
         await _commit_session(context)
 
@@ -467,6 +492,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             return
 
         transcription = stt_result.text
+        print(f"[CONV] user={user.name} (id={user.id}) voice transcription: {transcription[:200]}")
         if len(transcription) < 3:
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
@@ -489,6 +515,12 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         response = await conversation_engine.process_message(
             user, transcription, is_audio=True, audio_transcription=transcription
         )
+
+        print(f"[CONV] bot response: {response.text[:200]}")
+        if response.corrections:
+            print(f"[CONV] corrections: {response.corrections}")
+        if response.new_vocab:
+            print(f"[CONV] new_vocab: {response.new_vocab}")
 
         # Build text response with corrections
         reply_parts = [response.text]
