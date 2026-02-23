@@ -9,3 +9,10 @@
 |----|------|---|-------|------|
 | #3845 | 7:40 PM | 🔵 | Current Working Directory Identified | ~190 |
 </claude-mem-context>
+
+## Active Technologies
+- Python 3.12+ (async-first, type hints mandatory) + FastAPI, python-telegram-bot (PTB) v21+ (async), OpenAI SDK, Groq SDK, SQLAlchemy 2.0+ (async), Alembic, pydantic-settings, httpx, tiktoken, APScheduler, boto3, sentry-sdk (001-backend-setup)
+- PostgreSQL (Supabase) via SQLAlchemy ORM + Alembic migrations; Redis (Upstash) for caching/rate limiting; Cloudflare R2 for audio files (001-backend-setup)
+
+## Recent Changes
+- 001-backend-setup: Added Python 3.12+ (async-first, type hints mandatory) + FastAPI, python-telegram-bot (PTB) v21+ (async), OpenAI SDK, Groq SDK, SQLAlchemy 2.0+ (async), Alembic, pydantic-settings, httpx, tiktoken, APScheduler, boto3, sentry-sdk
