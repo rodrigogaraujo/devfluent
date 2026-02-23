@@ -72,6 +72,7 @@ async def lifespan(app: FastAPI):
     # PTB Application
     ptb_app = Application.builder().token(settings.TELEGRAM_BOT_TOKEN).build()
     await ptb_app.initialize()
+    await ptb_app.start()
 
     # Set webhook
     webhook_url = f"{settings.TELEGRAM_WEBHOOK_URL}/webhook/telegram"
@@ -183,6 +184,7 @@ async def lifespan(app: FastAPI):
         await ptb_app.bot.delete_webhook()
     except Exception:
         pass
+    await ptb_app.stop()
     await ptb_app.shutdown()
     await engine.dispose()
     if redis_client:
@@ -210,10 +212,12 @@ async def health():
 async def telegram_webhook(request: Request):
     try:
         data = await request.json()
+        logger.info("webhook_received", update_id=data.get("update_id"))
         ptb_app: Application = request.app.state.ptb_app
         update = Update.de_json(data, ptb_app.bot)
         if update:
             await ptb_app.process_update(update)
+            logger.info("webhook_processed", update_id=update.update_id)
     except Exception:
         logger.exception("webhook_processing_error")
     return JSONResponse(content={}, status_code=200)
