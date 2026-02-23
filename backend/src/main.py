@@ -211,6 +211,27 @@ async def health():
         )
 
 
+@app.post("/admin/reset-db")
+async def reset_db(request: Request):
+    """Temporary endpoint to truncate all data for testing."""
+    try:
+        async with async_session() as session:
+            await session.execute(text(
+                "TRUNCATE weekly_metrics, user_error_patterns, user_vocabulary, "
+                "study_plans, assessments, messages, conversations, users CASCADE"
+            ))
+            await session.commit()
+        # Also clear Redis
+        redis_client = request.app.state.redis
+        if redis_client:
+            await redis_client.flushdb()
+        print("[ADMIN] Database reset complete")
+        return {"status": "ok", "message": "All tables truncated"}
+    except Exception as e:
+        print(f"[ADMIN] Reset error: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
 @app.post("/webhook/telegram")
 async def telegram_webhook(request: Request):
     try:
